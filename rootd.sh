@@ -16,13 +16,18 @@ fi
 mkdir -p "$Q" 2>/dev/null
 chmod 0777 "$Q" 2>/dev/null
 export PATH=/product/bin:/system/bin:/system/xbin:/sbin:/vendor/bin
+# root / su 的 umask 可能是 077，会让 pid 和日志变成 600，
+# 容器里的 dshx doctor 就读不到它们。显式放宽。
+umask 022
 
 PIDFILE="$Q/rootd.pid"
 HB="$Q/heartbeat"
 LOG="$Q/rootd.log"
 
 echo $$ > "$PIDFILE"
+chmod 0644 "$PIDFILE" 2>/dev/null
 exec 2>>"$LOG"
+chmod 0644 "$LOG" 2>/dev/null
 echo "[rootd] up pid=$$ uid=$(id -u) domain=$(cat /proc/self/attr/current 2>/dev/null)" >>"$LOG"
 
 # 清掉启动前留下的垃圾：没人取的旧结果、没处理完的请求
