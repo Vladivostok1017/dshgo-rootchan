@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Vladivostok1017
 set -u
-SHIM=/usr/local/bin/sudo
+SHIM="${DSHX_SHIM:-/usr/local/bin/sudo}"
 Q="${ROOTD_Q:-/dev/shm/rootq}"
 ROOT_PHYS="${DSH_GO_RUNTIME_ROOT:-}"
 
@@ -103,11 +103,20 @@ case "${1:-}" in
   cp-to-device)
     shift; [ $# -ge 2 ] || { usage; exit 64; }
     phys=$(to_phys "$1") || exit 1
-    "$SHIM" "mkdir -p '$(dirname "$2")' && cp -f '$phys' '$2' && echo 'ok -> $2'" ;;
+    "$SHIM" "if [ ! -e '$phys' ]; then echo '源不存在: $phys' >&2; exit 1; fi
+mkdir -p '$(dirname "$2")' && cp -a '$phys' '$2' && echo 'ok -> $2'" ;;
   cp-to-container)
     shift; [ $# -ge 2 ] || { usage; exit 64; }
     phys=$(to_phys "$2") || exit 1
-    "$SHIM" "mkdir -p '$(dirname "$phys")' && cp -f '$1' '$phys' && echo 'ok -> $phys'" ;;
+    # 复制是 root 执行的，不处理属主的话拉进来就是 root 拥有，
+    # 容器里以应用 uid 运行的 DSH 会读不了 —— 和心跳那个 bug 同一个成因。
+    me=$(id -u 2>/dev/null || echo 0)
+    "$SHIM" "if [ ! -e '$1' ]; then echo '源不存在: $1' >&2; exit 1; fi
+mkdir -p '$(dirname "$phys")' || exit 1
+cp -a '$1' '$phys' || exit 1
+chown -R $me:$me '$phys' 2>/dev/null
+chmod -R a+rX '$phys' 2>/dev/null
+echo 'ok -> $phys'" ;;
   ""|-h|--help|help) usage ;;
   *) echo "dshx: 不认识的子命令 $1" >&2; usage; exit 64 ;;
 esac

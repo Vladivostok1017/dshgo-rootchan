@@ -126,6 +126,33 @@ dshx cp-to-device    <容器路径> <设备路径>
 dshx cp-to-container <设备路径> <容器路径>
 ```
 
+### 把设备上的文件拉进 Linux 环境
+
+容器里看不到 `/data`，所以不能直接 `cp`。用 `cp-to-container`，它会绕到 root 那一侧去取：
+
+```bash
+# 把另一个 App 的数据库拉进工作区
+dshx cp-to-container /data/data/<包名>/databases/x.db /root/workspace/x.db
+
+# 整个目录也行
+dshx cp-to-container /data/data/<包名>/shared_prefs /root/workspace/prefs/
+
+# 反向：把容器里的文件放到设备上
+dshx cp-to-device /root/workspace/out.zip /sdcard/out.zip
+```
+
+原理：设备侧的 root 能直接读到容器 rootfs 的物理路径
+
+```
+容器 /root/workspace/x.db  ==  设备 <rootfs>/root/workspace/x.db
+```
+
+所以是 root 直接 `cp`，不经过 `/sdcard` 中转，也不需要发两次请求。
+
+`cp-to-container` 复制完会 `chown` 到应用 uid 并放开读权限。复制动作是 root 执行的，不处理的话文件就是 root 拥有，容器里以应用 uid 运行的 DSH 读不了——这和心跳文件那个 bug 是同一个成因。
+
+大文件注意：单条请求服务端上限 900 秒，客户端等 300 秒就放弃。几百 MB 以上建议直接在设备侧用 `dev` 分块处理，或者先落到 `/sdcard`（两边共享，不用复制）。
+
 ### 路径对照
 
 | 容器内 | 手机上 | 同一份？ |

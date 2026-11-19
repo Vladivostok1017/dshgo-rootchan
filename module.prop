@@ -1,6 +1,6 @@
 id=dshgo-rootchan
 name=DSH Go Root Channel
-version=v2.1.1
-versionCode=21001
+version=v2.1.2
+versionCode=21002
 author=dsh-go-rootchan
 description=给 DSH Go 的 Linux 环境提供真实 root 通道：容器内用 dev / sudo 执行设备上的 root 命令。不改 APK、不改签名。开机自动接管，无常驻看门狗（进程意外退出时点「操作」按钮恢复）。
